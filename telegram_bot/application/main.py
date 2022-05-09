@@ -24,70 +24,33 @@ else:
 dispatcher = updater.dispatcher
 
 
-async def fetch(session, site):
-    try:
-        async with session.get(site, timeout=http_timeout, ssl=False) as resp:
-            if resp.status != 200:
-                updater.bot.send_message(chat_id=config['telegram']['group'],
-                                         text=f'Узел {site} в статусе HTTP ' + str(resp.status))
-            print(site, resp.status)
-    except Exception as error:
-        print('Request failed:', error)
-        return 1
-
-
-async def get_host(host):
-    if 'username' in host and host['username'] is not None and host['password'] is not None:
-        async with aiohttp.ClientSession(auth=aiohttp.BasicAuth(
-                host['username'],
-                host['password'])) as session:
-            return await fetch(session, host['site'])
-    else:
-        async with aiohttp.ClientSession() as session:
-            return await fetch(session, host['site'])
-
-
-async def check_http():
-    while True:
-        for host in config['http']['sites']:
-            error_count = 0
-            if await get_host(host) is not None:
-                for repeat in range(config['http']['repeat'] - 1):
-                    if await get_host(host) is not None:
-                        error_count += 1
-                if error_count == config['http']['repeat'] - 1:
-                    updater.bot.send_message(chat_id=config['telegram']['group'],
-                                             text=f'Узел {host["site"]} не доступен')
-        await asyncio.sleep(config['main']['repeat_period'])
-
-
 async def check_icmp():
     while True:
         for host in config['icmp']['hosts']:
             req = ping(host, config['icmp']['timeout'], unit='ms')
             if req is None:
-                updater.bot.send_message(chat_id=config['telegram']['group'], text=f'Узел {host} с ошибкой ICMP')
+                updater.bot.send_message(chat_id=config['telegram']['group'], text=f'Loz Bot {host} Chết Cmn zòi')
             elif req > config['icmp']['timedelay']:
                 updater.bot.send_message(chat_id=config['telegram']['group'],
-                                         text=f'Узел {host} с задержкой ICMP= ' + str(req))
+                                         text=f'Knot {host} с delay ICMP= ' + str(req))
         await asyncio.sleep(config['main']['delay'])
 
 
 def start(update, context):
     context.bot.send_message(chat_id=update.message.chat_id,
-                             text="Привет, я бот мониторинга! Ваш (группы) идентификатор = "
+                             text="Hello, I'm a monitoring bot! Your (group) ID = "
                                   + str(update.message.chat_id))
 
 
 def list_group(update, context):
-    message = 'На мониторинге следующие сайты (HTTP):\n'
+    message = 'The following sites are being monitored (HTTP):\n'
     if config['http']['sites'] is not None:
         for host in config['http']['sites']:
             if isinstance(host, dict):
                 message = message + str(host['site']) + '\n'
             else:
                 message = message + str(host) + '\n'
-    message = message +'\nНа мониторинге следующие ресурсы (ICMP):\n'
+    message = message +'\nThe following resources are being monitored (ICMP):\n'
     if config['icmp']['hosts'] is not None:
         for host in config['icmp']['hosts']:
             message = message + str(host) + '\n'
@@ -99,8 +62,6 @@ dispatcher.add_handler(CommandHandler('list', list_group))
 updater.start_polling()
 
 try:
-    if config['http']['sites'] is not None:
-        asyncio.run(check_http())
     if config['icmp']['hosts'] is not None:
         asyncio.run(check_icmp())
 except Exception as e:
